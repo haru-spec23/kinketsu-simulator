@@ -29,6 +29,7 @@ function dayLabel(it) {
   return "-";
 }
 
+
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -91,6 +92,30 @@ function cycleLabel(cycle) {
     }
     return totals;
   }, [state.items, state.settings.yearlyMode]);
+  
+  const sortedItems = useMemo(() => {
+    function key(it) {
+      // one_time: payDate
+      if (it.cycle === "one_time") {
+        return it.payDate ? new Date(it.payDate).getTime() : Number.POSITIVE_INFINITY;
+      }
+
+      // recurring: use "this month's" pay day as a rough key
+      const d = it.payDay ?? 1;
+      // 今月のカレンダー上の引落日（存在しない日は月末丸めはcalc側でやってるけど、表示並びは簡易でOK）
+      const now = new Date();
+      const pay = new Date(now.getFullYear(), now.getMonth(), d);
+      return pay.getTime();
+    }
+
+    const arr = [...state.items];
+    arr.sort((a, b) => {
+      const ka = key(a);
+      const kb = key(b);
+      return sortMode === "dateAsc" ? ka - kb : kb - ka;
+    });
+    return arr;
+  }, [state.items, sortMode]);
 
   const monthStartDay = state.settings.monthStartDay;
 
@@ -144,6 +169,7 @@ function cycleLabel(cycle) {
           />
         </section>
       )}
+        const [sortMode, setSortMode] = useState("dateAsc"); // "dateAsc" | "dateDesc"
 
       <section style={cardStyle()}>
         <h2 style={{ margin: "0 0 8px" }}>一覧（最新10件）</h2>
@@ -151,10 +177,12 @@ function cycleLabel(cycle) {
           <div style={{ opacity: 0.75 }}>まだありません</div>
         ) : (
           <ul style={{ margin: 0, paddingLeft: 18 }}>
-            {state.items.slice(0, 10).map((it) => (
+            {sortedItems.slice(0, 10).map((it) => (
+
                            <li key={it.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <span>
-                 {it.name} / {yen(it.amount)} / {categoryLabel(it.category)} / {cycleLabel(it.cycle)}
+                 {it.name} / {yen(it.amount)} / {categoryLabel(it.category)} / {cycleLabel(it.cycle)} / {dayLabel(it)}
+
 
                 </span>
                 <button
@@ -343,6 +371,20 @@ function MiniStat({ label, value }) {
     </form>
   );
 }
+
+        <div style={{ marginBottom: 10 }}>
+          並び替え：
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value)}
+            style={{ marginLeft: 8, padding: 6, borderRadius: 8 }}
+          >
+            <option value="dateAsc">日付が早い順</option>
+            <option value="dateDesc">日付が遅い順</option>
+          </select>
+        </div>
+
+
 
 function pageStyle() {
   return {
