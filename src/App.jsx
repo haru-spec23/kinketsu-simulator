@@ -196,25 +196,49 @@ export default function App() {
         {sortedItems.length === 0 ? (
           <div style={{ opacity: 0.75 }}>まだありません</div>
         ) : (
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            {sortedItems.slice(0, 10).map((it) => (
-              <li key={it.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <span>
-                  {it.name} / {yen(it.amount)} / {categoryLabel(it.category)} / {cycleLabel(it.cycle)} / {dayLabel(it)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!confirm("この項目を削除しますか？")) return;
-                    setState((s) => ({ ...s, items: s.items.filter((x) => x.id !== it.id) }));
-                  }}
-                  style={{ ...btnStyle("ghost"), padding: "6px 10px" }}
-                >
-                  削除
-                </button>
-              </li>
-            ))}
-          </ul>
+          {sortedItems.length === 0 ? (
+  <div style={{ opacity: 0.75 }}>まだありません</div>
+) : (
+  <table className="table">
+    <thead>
+      <tr>
+        <th>項目</th>
+        <th>金額</th>
+        <th>カテゴリ</th>
+        <th>周期</th>
+        <th>日付</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {sortedItems.slice(0, 50).map((it) => (
+        <tr key={it.id}>
+          <td>{it.name}</td>
+          <td className="mono">{yen(it.amount)}</td>
+          <td>{categoryLabel(it.category)}</td>
+          <td>{cycleLabel(it.cycle)}</td>
+          <td>{dayLabel(it)}</td>
+          <td>
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirm("この項目を削除しますか？")) return;
+                setState((s) => ({
+                  ...s,
+                  items: s.items.filter((x) => x.id !== it.id),
+                }));
+              }}
+              className="btn btnSmall btnDanger"
+            >
+              削除
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+)}
+
         )}
       </section>
 
