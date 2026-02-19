@@ -135,7 +135,12 @@ export default function App() {
 
       {showAdd && (
         <div className="modalOverlay" onMouseDown={() => setShowAdd(false)}>
-          <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+          <div
+  className="modal"
+  onMouseDown={(e) => e.stopPropagation()}
+  style={{ background: "#11161c", opacity: 1 }}
+>
+
             <div className="modalHeader">
               <h2 style={{ margin: 0, fontSize: 16 }}>支出を追加</h2>
               <button className="btn btnSmall" type="button" onClick={() => setShowAdd(false)}>
