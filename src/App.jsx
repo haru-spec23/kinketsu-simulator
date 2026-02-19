@@ -37,7 +37,8 @@ function uid() {
 export default function App() {
   const [state, setState] = useState(() => loadState() ?? defaultState());
   const [showAdd, setShowAdd] = useState(false);
-    const [sortMode, setSortMode] = useState("dateAsc");
+  const [sortMode, setSortMode] = useState("dateAsc");
+
   function MiniStat({ label, value }) {
   return (
     <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
@@ -250,6 +251,14 @@ function cycleLabel(cycle) {
         © {new Date().getFullYear()} kinketsu-simulator
       </footer>
     </main>
+  );
+}
+function MiniStat({ label, value }) {
+  return (
+    <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700 }}>{value}</div>
+    </div>
   );
 }
 
