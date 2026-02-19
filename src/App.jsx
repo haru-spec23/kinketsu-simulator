@@ -37,6 +37,7 @@ function uid() {
 export default function App() {
   const [state, setState] = useState(() => loadState() ?? defaultState());
   const [showAdd, setShowAdd] = useState(false);
+    const [sortMode, setSortMode] = useState("dateAsc");
   function MiniStat({ label, value }) {
   return (
     <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
@@ -169,7 +170,6 @@ function cycleLabel(cycle) {
           />
         </section>
       )}
-        const [sortMode, setSortMode] = useState("dateAsc"); // "dateAsc" | "dateDesc"
 
       <section style={cardStyle()}>
         <h2 style={{ margin: "0 0 8px" }}>一覧（最新10件）</h2>
