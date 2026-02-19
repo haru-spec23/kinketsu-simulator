@@ -408,7 +408,8 @@ function inputStyle() {
 
 function selectStyle() {
   return { marginLeft: 8, padding: 6, borderRadius: 8 };
-  function MiniStat({ label, value }) {
+}
+function MiniStat({ label, value }) {
   return (
     <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
       <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
@@ -417,4 +418,3 @@ function selectStyle() {
   );
 }
 
-}
