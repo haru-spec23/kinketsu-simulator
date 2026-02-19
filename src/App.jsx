@@ -134,17 +134,26 @@ export default function App() {
       </section>
 
       {showAdd && (
-        <section className="card">
-          <h2 style={{ margin: "0 0 8px" }}>支出を追加</h2>
-          <AddForm
-            onCancel={() => setShowAdd(false)}
-            onAdd={(item) => {
-              setState((s) => ({ ...s, items: [item, ...s.items] }));
-              setShowAdd(false);
-            }}
-          />
-        </section>
+        <div className="modalOverlay" onMouseDown={() => setShowAdd(false)}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <h2 style={{ margin: 0, fontSize: 16 }}>支出を追加</h2>
+              <button className="btn btnSmall" type="button" onClick={() => setShowAdd(false)}>
+                閉じる
+              </button>
+            </div>
+            <div className="hr" />
+            <AddForm
+              onCancel={() => setShowAdd(false)}
+              onAdd={(item) => {
+                setState((s) => ({ ...s, items: [item, ...s.items] }));
+                setShowAdd(false);
+              }}
+            />
+          </div>
+        </div>
       )}
+
 
      <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>一覧（最新10件）</h2>
