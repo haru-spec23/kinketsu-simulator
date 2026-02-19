@@ -41,6 +41,25 @@ export default function App() {
   useEffect(() => {
     saveState(state);
   }, [state]);
+  //日本語変換
+  function categoryLabel(cat) {
+  return {
+    fixed: "固定費",
+    subscription: "サブスク",
+    variable: "変動費",
+    initial: "初期費用",
+    other: "その他",
+  }[cat] ?? cat;
+}
+
+function cycleLabel(cycle) {
+  return {
+    monthly: "月額",
+    yearly: "年額",
+    one_time: "単発",
+  }[cycle] ?? cycle;
+}
+
 
   const totalThisMonth = useMemo(() => {
     return calcTotalThisPeriod(state.items, state.settings, new Date());
@@ -126,7 +145,8 @@ export default function App() {
             {state.items.slice(0, 10).map((it) => (
                            <li key={it.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <span>
-                  {it.name} / {yen(it.amount)} / {it.category} / {it.cycle}
+                 {it.name} / {yen(it.amount)} / {categoryLabel(it.category)} / {cycleLabel(it.cycle)}
+
                 </span>
                 <button
                   type="button"
