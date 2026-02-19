@@ -168,12 +168,14 @@ a{ color: inherit; }
 }
 .modal{
   width: min(680px, 100%);
-  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.06));
-  border: 1px solid var(--border);
+  background: rgba(15, 18, 24, 0.98); /* ← ほぼ不透明 */
+  border: 1px solid rgba(255,255,255,0.16);
   border-radius: 16px;
   box-shadow: var(--shadow);
   padding: 14px;
+  backdrop-filter: blur(8px);
 }
+
 .modalHeader{
   display:flex;
   justify-content: space-between;
