@@ -248,20 +248,34 @@ const [editing, setEditing] = useState(null); // item or null
           <td>{cycleLabel(it.cycle)}</td>
           <td>{dayLabel(it)}</td>
           <td>
-            <button
-              type="button"
-              onClick={() => {
-                if (!confirm("この項目を削除しますか？")) return;
-                setState((s) => ({
-                  ...s,
-                  items: s.items.filter((x) => x.id !== it.id),
-                }));
-              }}
-              className="btn btnSmall btnDanger"
-            >
-              削除
-            </button>
-          </td>
+  <div className="row" style={{ gap: 8 }}>
+    <button
+      type="button"
+      onClick={() => {
+        setEditing(it);     // ← これで編集モードでモーダルが開く
+        setShowAdd(false);  // ← 念のため
+      }}
+      className="btn btnSmall"
+    >
+      編集
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        if (!confirm("この項目を削除しますか？")) return;
+        setState((s) => ({
+          ...s,
+          items: s.items.filter((x) => x.id !== it.id),
+        }));
+      }}
+      className="btn btnSmall btnDanger"
+    >
+      削除
+    </button>
+  </div>
+</td>
+
         </tr>
       ))}
     </tbody>
