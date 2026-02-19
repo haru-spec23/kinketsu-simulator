@@ -73,6 +73,7 @@ export default function App() {
   const [state, setState] = useState(() => loadState() ?? defaultState());
   const [showAdd, setShowAdd] = useState(false);
   const [sortMode, setSortMode] = useState("dateAsc"); // "dateAsc" | "dateDesc"
+const [editing, setEditing] = useState(null); // item or null
 
   // 保存
   useEffect(() => {
@@ -132,32 +133,63 @@ export default function App() {
           </button>
         </div>
       </section>
+{(showAdd || editing) && (
+  <div
+    className="modalOverlay"
+    onMouseDown={() => {
+      setShowAdd(false);
+      setEditing(null);
+    }}
+    style={{ background: "rgba(0,0,0,0.82)" }}
+  >
+    <div
+      className="modal"
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{ background: "#11161c", opacity: 1 }}
+    >
+      <div className="modalHeader">
+        <h2 style={{ margin: 0, fontSize: 16 }}>
+          {editing ? "支出を編集" : "支出を追加"}
+        </h2>
+        <button
+          className="btn btnSmall"
+          type="button"
+          onClick={() => {
+            setShowAdd(false);
+            setEditing(null);
+          }}
+        >
+          閉じる
+        </button>
+      </div>
 
-      {showAdd && (
-        <div className="modalOverlay" onMouseDown={() => setShowAdd(false)}>
-          <div
-  className="modal"
-  onMouseDown={(e) => e.stopPropagation()}
-  style={{ background: "#11161c", opacity: 1 }}
->
+      <div className="hr" />
 
-            <div className="modalHeader">
-              <h2 style={{ margin: 0, fontSize: 16 }}>支出を追加</h2>
-              <button className="btn btnSmall" type="button" onClick={() => setShowAdd(false)}>
-                閉じる
-              </button>
-            </div>
-            <div className="hr" />
-            <AddForm
-              onCancel={() => setShowAdd(false)}
-              onAdd={(item) => {
-                setState((s) => ({ ...s, items: [item, ...s.items] }));
-                setShowAdd(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
+      <AddForm
+        initialItem={editing}
+        onCancel={() => {
+          setShowAdd(false);
+          setEditing(null);
+        }}
+        onAdd={(item) => {
+          if (editing) {
+            // 編集：同じidの要素を置き換える
+            setState((s) => ({
+              ...s,
+              items: s.items.map((x) => (x.id === item.id ? item : x)),
+            }));
+            setEditing(null);
+          } else {
+            // 追加：先頭に追加
+            setState((s) => ({ ...s, items: [item, ...s.items] }));
+            setShowAdd(false);
+          }
+        }}
+      />
+    </div>
+  </div>
+)}
+
 
 
      <section className="card">
