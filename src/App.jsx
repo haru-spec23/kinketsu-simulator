@@ -19,6 +19,33 @@ function todayISO() {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }
+
+function uid() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function categoryLabel(cat) {
+  return (
+    {
+      fixed: "固定費",
+      subscription: "サブスク",
+      variable: "変動費",
+      initial: "初期費用",
+      other: "その他",
+    }[cat] ?? cat
+  );
+}
+
+function cycleLabel(cycle) {
+  return (
+    {
+      monthly: "月額",
+      yearly: "年額",
+      one_time: "単発",
+    }[cycle] ?? cycle
+  );
+}
+
 function dayLabel(it) {
   if (it.cycle === "one_time") {
     return it.payDate ? `支払日: ${it.payDate}` : "支払日: -";
@@ -29,91 +56,37 @@ function dayLabel(it) {
   return "-";
 }
 
-
-function uid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+// 並び替え用のキー（MVP版）
+// one_time: payDate
+// recurring: 今月のpayDayで並べる（④で月別支払生成を作ったら強化できる）
+function sortKeyTime(it) {
+  if (it.cycle === "one_time") {
+    return it.payDate ? new Date(it.payDate).getTime() : Number.POSITIVE_INFINITY;
+  }
+  const d = it.payDay ?? 1;
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), d).getTime();
 }
 
 export default function App() {
   const [state, setState] = useState(() => loadState() ?? defaultState());
   const [showAdd, setShowAdd] = useState(false);
-  const [sortMode, setSortMode] = useState("dateAsc");
-
-  function MiniStat({ label, value }) {
-  return (
-    <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
-      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700 }}>{value}</div>
-    </div>
-  );
-}
-
+  const [sortMode, setSortMode] = useState("dateAsc"); // "dateAsc" | "dateDesc"
 
   // 保存
   useEffect(() => {
     saveState(state);
   }, [state]);
-  //日本語変換
-  function categoryLabel(cat) {
-  return {
-    fixed: "固定費",
-    subscription: "サブスク",
-    variable: "変動費",
-    initial: "初期費用",
-    other: "その他",
-  }[cat] ?? cat;
-}
-
-function cycleLabel(cycle) {
-  return {
-    monthly: "月額",
-    yearly: "年額",
-    one_time: "単発",
-  }[cycle] ?? cycle;
-}
-
 
   const totalThisMonth = useMemo(() => {
     return calcTotalThisPeriod(state.items, state.settings, new Date());
-  }, [state]);
-    const breakdown = useMemo(() => {
-    const totals = { fixed: 0, subscription: 0, variable: 0, initial: 0, other: 0 };
-    for (const it of state.items) {
-      const cat = it.category;
-      if (totals[cat] == null) continue;
+  }, [state.items, state.settings]);
 
-      // 今月に入るものだけ合計に寄せたいので、calcTotalThisPeriodと同じ判定でやるのが理想
-      // MVPでは「今月合計に寄与したもの」を後で精密化する前提で、まずは全アイテムの月換算で小計表示にする
-      if (it.cycle === "one_time") {
-        totals[cat] += it.amount;
-      } else if (it.cycle === "monthly") {
-        totals[cat] += it.amount;
-      } else if (it.cycle === "yearly") {
-        totals[cat] += (state.settings.yearlyMode === "cashflow" ? it.amount : it.amount / 12);
-      }
-    }
-    return totals;
-  }, [state.items, state.settings.yearlyMode]);
-  
   const sortedItems = useMemo(() => {
-    function key(it) {
-      // one_time: payDate
-      if (it.cycle === "one_time") {
-        return it.payDate ? new Date(it.payDate).getTime() : Number.POSITIVE_INFINITY;
-      }
-
-      // recurring: use "this month's" pay day as a rough key
-      const d = it.payDay ?? 1;
-      // 今月のカレンダー上の引落日（存在しない日は月末丸めはcalc側でやってるけど、表示並びは簡易でOK）
-      const now = new Date();
-      const pay = new Date(now.getFullYear(), now.getMonth(), d);
-      return pay.getTime();
-    }
-
     const arr = [...state.items];
     arr.sort((a, b) => {
-      const ka = key(a);
-      const kb = key(b);
+      const ka = sortKeyTime(a);
+      const kb = sortKeyTime(b);
       return sortMode === "dateAsc" ? ka - kb : kb - ka;
     });
     return arr;
@@ -133,13 +106,6 @@ function cycleLabel(cycle) {
       <section style={cardStyle()}>
         <h2 style={{ margin: "0 0 8px" }}>今月の合計</h2>
         <div style={{ fontSize: 32, fontWeight: 700 }}>{yen(totalThisMonth)}</div>
-                <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
-          <MiniStat label="固定費" value={yen(breakdown.fixed)} />
-          <MiniStat label="サブスク" value={yen(breakdown.subscription)} />
-          <MiniStat label="変動費" value={yen(breakdown.variable)} />
-          <MiniStat label="初期費用" value={yen(breakdown.initial)} />
-          <MiniStat label="その他" value={yen(breakdown.other)} />
-        </div>
 
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" onClick={() => setShowAdd(true)} style={btnStyle("solid")}>
@@ -174,17 +140,27 @@ function cycleLabel(cycle) {
 
       <section style={cardStyle()}>
         <h2 style={{ margin: "0 0 8px" }}>一覧（最新10件）</h2>
-        {state.items.length === 0 ? (
+
+        <div style={{ marginBottom: 10 }}>
+          並び替え：
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value)}
+            style={{ marginLeft: 8, padding: 6, borderRadius: 8 }}
+          >
+            <option value="dateAsc">日付が早い順</option>
+            <option value="dateDesc">日付が遅い順</option>
+          </select>
+        </div>
+
+        {sortedItems.length === 0 ? (
           <div style={{ opacity: 0.75 }}>まだありません</div>
         ) : (
           <ul style={{ margin: 0, paddingLeft: 18 }}>
             {sortedItems.slice(0, 10).map((it) => (
-
-                           <li key={it.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <li key={it.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <span>
-                 {it.name} / {yen(it.amount)} / {categoryLabel(it.category)} / {cycleLabel(it.cycle)} / {dayLabel(it)}
-
-
+                  {it.name} / {yen(it.amount)} / {categoryLabel(it.category)} / {cycleLabel(it.cycle)} / {dayLabel(it)}
                 </span>
                 <button
                   type="button"
@@ -197,7 +173,6 @@ function cycleLabel(cycle) {
                   削除
                 </button>
               </li>
-
             ))}
           </ul>
         )}
@@ -253,14 +228,6 @@ function cycleLabel(cycle) {
     </main>
   );
 }
-function MiniStat({ label, value }) {
-  return (
-    <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
-      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700 }}>{value}</div>
-    </div>
-  );
-}
 
 function AddForm({ onAdd, onCancel }) {
   const [category, setCategory] = useState("fixed");
@@ -276,15 +243,6 @@ function AddForm({ onAdd, onCancel }) {
   useEffect(() => {
     if (isInitial) setCycle("one_time");
   }, [isInitial]);
-  
-function MiniStat({ label, value }) {
-  return (
-    <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
-      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700 }}>{value}</div>
-    </div>
-  );
-}
 
   function submit(e) {
     e.preventDefault();
@@ -381,20 +339,6 @@ function MiniStat({ label, value }) {
   );
 }
 
-        <div style={{ marginBottom: 10 }}>
-          並び替え：
-          <select
-            value={sortMode}
-            onChange={(e) => setSortMode(e.target.value)}
-            style={{ marginLeft: 8, padding: 6, borderRadius: 8 }}
-          >
-            <option value="dateAsc">日付が早い順</option>
-            <option value="dateDesc">日付が遅い順</option>
-          </select>
-        </div>
-
-
-
 function pageStyle() {
   return {
     fontFamily: "system-ui",
@@ -427,7 +371,14 @@ function btnStyle(kind = "solid") {
 }
 
 function inputStyle() {
-  return { display: "block", width: "100%", marginTop: 6, padding: 8, borderRadius: 10, border: "1px solid rgba(0,0,0,0.18)" };
+  return {
+    display: "block",
+    width: "100%",
+    marginTop: 6,
+    padding: 8,
+    borderRadius: 10,
+    border: "1px solid rgba(0,0,0,0.18)",
+  };
 }
 
 function selectStyle() {
