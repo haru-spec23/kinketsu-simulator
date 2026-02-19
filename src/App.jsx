@@ -19,6 +19,15 @@ function todayISO() {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }
+function dayLabel(it) {
+  if (it.cycle === "one_time") {
+    return it.payDate ? `支払日: ${it.payDate}` : "支払日: -";
+  }
+  const d = it.payDay ?? 1;
+  if (it.cycle === "monthly") return `引落: 毎月${d}日`;
+  if (it.cycle === "yearly") return `引落: 毎年${d}日`;
+  return "-";
+}
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
