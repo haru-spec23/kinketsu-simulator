@@ -51,11 +51,10 @@ a{ color: inherit; }
 }
 
 .card{
-  background: linear-gradient(180deg, var(--card2), var(--card));
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 14px;
+  background: #141a21;
+  border: 1px solid #1f2630;
+  border-radius: 14px;
+  padding: 16px;
   margin-bottom: 14px;
 }
 
@@ -160,7 +159,7 @@ a{ color: inherit; }
 .modalOverlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.80);  /* かなり暗く */
   display:flex;
   align-items:center;
   justify-content:center;
@@ -168,13 +167,13 @@ a{ color: inherit; }
 }
 .modal{
   width: min(680px, 100%);
-  background: rgba(15, 18, 24, 0.98); /* ← ほぼ不透明 */
-  border: 1px solid rgba(255,255,255,0.16);
+  background: #11161c;          /* 完全不透明 */
+  border: 1px solid #222831;
   border-radius: 16px;
-  box-shadow: var(--shadow);
-  padding: 14px;
-  backdrop-filter: blur(8px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  padding: 18px;
 }
+
 
 .modalHeader{
   display:flex;
