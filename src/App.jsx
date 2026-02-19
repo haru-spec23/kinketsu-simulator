@@ -334,17 +334,27 @@ const [editing, setEditing] = useState(null); // item or null
   );
 }
 
-function AddForm({ onAdd, onCancel }) {
-  const [category, setCategory] = useState("fixed");
-  const [name, setName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [cycle, setCycle] = useState("monthly");
-  const [payDay, setPayDay] = useState("");
-  const [startDate, setStartDate] = useState(todayISO());
-  const [endDate, setEndDate] = useState("");
-  const [payDate, setPayDate] = useState(todayISO());
+function AddForm({ onAdd, onCancel, initialItem }) {
 
-  const isInitial = category === "initial";
+const isEdit = !!initialItem;
+
+const [category, setCategory] = useState(initialItem?.category ?? "fixed");
+const [name, setName] = useState(initialItem?.name ?? "");
+const [amount, setAmount] = useState(
+  initialItem ? String(initialItem.amount) : ""
+);
+const [cycle, setCycle] = useState(initialItem?.cycle ?? "monthly");
+const [payDay, setPayDay] = useState(
+  initialItem?.payDay == null ? "" : String(initialItem.payDay)
+);
+const [startDate, setStartDate] = useState(
+  initialItem?.startDate ?? todayISO()
+);
+const [endDate, setEndDate] = useState(initialItem?.endDate ?? "");
+const [payDate, setPayDate] = useState(
+  initialItem?.payDate ?? todayISO()
+);
+
   useEffect(() => {
     if (isInitial) setCycle("one_time");
   }, [isInitial]);
@@ -356,7 +366,8 @@ function AddForm({ onAdd, onCancel }) {
     if (!Number.isFinite(amt) || amt <= 0) return alert("金額は正の数で入れてね");
 
     const item = {
-      id: uid(),
+      id: initialItem?.id ?? uid(),
+
       name: name.trim(),
       amount: Math.round(amt),
       category,
