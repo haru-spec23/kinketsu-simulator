@@ -159,7 +159,7 @@ a{ color: inherit; }
 .modalOverlay{
   position: fixed;
   inset: 0;
-  background: #000;   /* ← 100%不透明 */
+  background: rgba(0,0,0,0.100);  /* かなり暗く */
   display:flex;
   align-items:center;
   justify-content:center;
