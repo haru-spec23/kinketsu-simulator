@@ -36,6 +36,24 @@ export default function App() {
   const totalThisMonth = useMemo(() => {
     return calcTotalThisPeriod(state.items, state.settings, new Date());
   }, [state]);
+    const breakdown = useMemo(() => {
+    const totals = { fixed: 0, subscription: 0, variable: 0, initial: 0, other: 0 };
+    for (const it of state.items) {
+      const cat = it.category;
+      if (totals[cat] == null) continue;
+
+      // 今月に入るものだけ合計に寄せたいので、calcTotalThisPeriodと同じ判定でやるのが理想
+      // MVPでは「今月合計に寄与したもの」を後で精密化する前提で、まずは全アイテムの月換算で小計表示にする
+      if (it.cycle === "one_time") {
+        totals[cat] += it.amount;
+      } else if (it.cycle === "monthly") {
+        totals[cat] += it.amount;
+      } else if (it.cycle === "yearly") {
+        totals[cat] += (state.settings.yearlyMode === "cashflow" ? it.amount : it.amount / 12);
+      }
+    }
+    return totals;
+  }, [state.items, state.settings.yearlyMode]);
 
   const monthStartDay = state.settings.monthStartDay;
 
@@ -51,6 +69,13 @@ export default function App() {
       <section style={cardStyle()}>
         <h2 style={{ margin: "0 0 8px" }}>今月の合計</h2>
         <div style={{ fontSize: 32, fontWeight: 700 }}>{yen(totalThisMonth)}</div>
+                <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
+          <MiniStat label="固定費" value={yen(breakdown.fixed)} />
+          <MiniStat label="サブスク" value={yen(breakdown.subscription)} />
+          <MiniStat label="変動費" value={yen(breakdown.variable)} />
+          <MiniStat label="初期費用" value={yen(breakdown.initial)} />
+          <MiniStat label="その他" value={yen(breakdown.other)} />
+        </div>
 
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" onClick={() => setShowAdd(true)} style={btnStyle("solid")}>
@@ -90,9 +115,22 @@ export default function App() {
         ) : (
           <ul style={{ margin: 0, paddingLeft: 18 }}>
             {state.items.slice(0, 10).map((it) => (
-              <li key={it.id}>
-                {it.name} / {yen(it.amount)} / {it.category} / {it.cycle}
+                           <li key={it.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span>
+                  {it.name} / {yen(it.amount)} / {it.category} / {it.cycle}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!confirm("この項目を削除しますか？")) return;
+                    setState((s) => ({ ...s, items: s.items.filter((x) => x.id !== it.id) }));
+                  }}
+                  style={{ ...btnStyle("ghost"), padding: "6px 10px" }}
+                >
+                  削除
+                </button>
               </li>
+
             ))}
           </ul>
         )}
@@ -163,6 +201,15 @@ function AddForm({ onAdd, onCancel }) {
   useEffect(() => {
     if (isInitial) setCycle("one_time");
   }, [isInitial]);
+  
+function MiniStat({ label, value }) {
+  return (
+    <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 10 }}>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
 
   function submit(e) {
     e.preventDefault();
