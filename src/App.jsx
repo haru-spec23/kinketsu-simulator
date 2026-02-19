@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { defaultState, loadState, saveState } from "./storage.js";
 import { calcTotalThisPeriod } from "./calc.js";
+import { calcYearByMonth } from "./yearView.js";
 
 function yen(n) {
   return new Intl.NumberFormat("ja-JP").format(Math.round(n)) + "円";
@@ -81,6 +82,12 @@ export default function App() {
   const totalThisMonth = useMemo(() => {
     return calcTotalThisPeriod(state.items, state.settings, new Date());
   }, [state.items, state.settings]);
+  const year = new Date().getFullYear();
+  const byMonth = useMemo(() => {
+    return calcYearByMonth(state.items, year, state.settings.yearlyMode);
+  }, [state.items, state.settings.yearlyMode, year]);
+
+  const yearTotal = useMemo(() => byMonth.reduce((a, b) => a + b, 0), [byMonth]);
 
   const sortedItems = useMemo(() => {
     const arr = [...state.items];
@@ -153,6 +160,24 @@ export default function App() {
           </select>
         </div>
 
+              <section style={cardStyle()}>
+        <h2 style={{ margin: "0 0 8px" }}>{year}年（1〜12月）の支払い</h2>
+        <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
+          年合計：<b>{yen(yearTotal)}</b>（年額モード：{state.settings.yearlyMode}）
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
+          {byMonth.map((v, i) => (
+            <MiniStat key={i} label={`${i + 1}月`} value={yen(v)} />
+          ))}
+        </div>
+
+        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 10 }}>
+          ※ この表は暦月（1日〜末日）で集計しています。
+        </div>
+      </section>
+
+        
         {sortedItems.length === 0 ? (
           <div style={{ opacity: 0.75 }}>まだありません</div>
         ) : (
