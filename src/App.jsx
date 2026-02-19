@@ -192,10 +192,7 @@ export default function App() {
         </div>
       </section>
 
-        
-        {sortedItems.length === 0 ? (
-          <div style={{ opacity: 0.75 }}>まだありません</div>
-        ) : (
+
           {sortedItems.length === 0 ? (
   <div style={{ opacity: 0.75 }}>まだありません</div>
 ) : (
