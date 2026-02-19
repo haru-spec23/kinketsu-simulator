@@ -102,7 +102,8 @@ export default function App() {
   const monthStartDay = state.settings.monthStartDay;
 
   return (
-    <main style={pageStyle()}>
+    <main className="container">
+
       <header style={{ marginBottom: 16 }}>
         <h1 style={{ margin: 0 }}>金欠or貯金シミュレーター</h1>
         <p style={{ margin: "6px 0 0", opacity: 0.8 }}>
@@ -110,7 +111,7 @@ export default function App() {
         </p>
       </header>
 
-      <section style={cardStyle()}>
+      <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>今月の合計</h2>
         <div style={{ fontSize: 32, fontWeight: 700 }}>{yen(totalThisMonth)}</div>
 
@@ -133,7 +134,7 @@ export default function App() {
       </section>
 
       {showAdd && (
-        <section style={cardStyle()}>
+        <section className="card">
           <h2 style={{ margin: "0 0 8px" }}>支出を追加</h2>
           <AddForm
             onCancel={() => setShowAdd(false)}
@@ -145,7 +146,7 @@ export default function App() {
         </section>
       )}
 
-      <section style={cardStyle()}>
+     <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>一覧（最新10件）</h2>
 
         <div style={{ marginBottom: 10 }}>
@@ -160,7 +161,7 @@ export default function App() {
           </select>
         </div>
 
-              <section style={cardStyle()}>
+              <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>{year}年（1〜12月）の支払い</h2>
         <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
           年合計：<b>{yen(yearTotal)}</b>（年額モード：{state.settings.yearlyMode}）
@@ -203,7 +204,7 @@ export default function App() {
         )}
       </section>
 
-      <section style={cardStyle()}>
+     <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>設定</h2>
 
         <label style={{ display: "block", marginBottom: 10 }}>
