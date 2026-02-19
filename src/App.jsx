@@ -335,29 +335,21 @@ const [editing, setEditing] = useState(null); // item or null
 }
 
 function AddForm({ onAdd, onCancel, initialItem }) {
+  const [category, setCategory] = useState(initialItem?.category ?? "fixed");
+  const [name, setName] = useState(initialItem?.name ?? "");
+  const [amount, setAmount] = useState(initialItem ? String(initialItem.amount) : "");
+  const [cycle, setCycle] = useState(initialItem?.cycle ?? "monthly");
+  const [payDay, setPayDay] = useState(initialItem?.payDay == null ? "" : String(initialItem.payDay));
+  const [startDate, setStartDate] = useState(initialItem?.startDate ?? todayISO());
+  const [endDate, setEndDate] = useState(initialItem?.endDate ?? "");
+  const [payDate, setPayDate] = useState(initialItem?.payDate ?? todayISO());
 
-const isEdit = !!initialItem;
-
-const [category, setCategory] = useState(initialItem?.category ?? "fixed");
-const [name, setName] = useState(initialItem?.name ?? "");
-const [amount, setAmount] = useState(
-  initialItem ? String(initialItem.amount) : ""
-);
-const [cycle, setCycle] = useState(initialItem?.cycle ?? "monthly");
-const [payDay, setPayDay] = useState(
-  initialItem?.payDay == null ? "" : String(initialItem.payDay)
-);
-const [startDate, setStartDate] = useState(
-  initialItem?.startDate ?? todayISO()
-);
-const [endDate, setEndDate] = useState(initialItem?.endDate ?? "");
-const [payDate, setPayDate] = useState(
-  initialItem?.payDate ?? todayISO()
-);
+  const isInitial = category === "initial";
 
   useEffect(() => {
     if (isInitial) setCycle("one_time");
   }, [isInitial]);
+
 
   function submit(e) {
     e.preventDefault();
