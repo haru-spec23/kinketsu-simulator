@@ -391,11 +391,11 @@ const periodLabel = useMemo(() => {
         </div>
       )}
 
-      <section className="card">
+     <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>一覧</h2>
 
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ marginBottom: 10, display: "flex", gap: 15, flexWrap: "wrap" }}>
+        {/* 外側のdivを消して、以下のdivだけにする */}
+        <div style={{ marginBottom: 10, display: "flex", gap: 15, flexWrap: "wrap" }}>
           <label>
             表示：
             <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)} className="select" style={{ width: "auto", marginLeft: 8 }}>
@@ -413,6 +413,10 @@ const periodLabel = useMemo(() => {
             </select>
           </label>
         </div>
+
+        {sortedItems.length === 0 ? (
+          <div style={{ opacity: 0.75 }}>まだありません</div>
+// ...以下そのまま
   
 
         {sortedItems.length === 0 ? (
