@@ -467,10 +467,12 @@ const periodLabel = useMemo(() => {
 <section className="card">
   <h2 style={{ margin: "0 0 8px" }}>{year}年（1〜12月）</h2>
 
-  <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
-    支出：<b>{yen(expenseYearTotal)}</b> ／ 収入：<b>{yen(incomeYearTotal)}</b> ／ 収支：<b>{yen(netYearTotal)}</b>
-    （年額モード：{state.settings.yearlyMode}）
-  </div>
+<div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
+  支出：<b style={{ color: "#f87171" }}>{yen(expenseYearTotal)}</b> ／ 
+  収入：<b style={{ color: "#4ade80" }}>{yen(incomeYearTotal)}</b> ／ 
+  収支：<b style={{ color: getAmountColor(netYearTotal) }}>{yen(netYearTotal)}</b>
+  （年額モード：{state.settings.yearlyMode}）
+</div>
 
   <table className="table">
     <thead>
@@ -490,7 +492,7 @@ const periodLabel = useMemo(() => {
             <td>{i + 1}月</td>
             <td className="mono" style={{ color: "#f87171", fontWeight: 700 }}>{yen(ex)}</td>
             <td className="mono" style={{ color: "#4ade80", fontWeight: 700 }}>{yen(inc)}</td>
-            <td className="mono" style={{ fontWeight: 800 }}>{yen(net)}</td>
+           <td className="mono" style={{ fontWeight: 800, color: getAmountColor(net) }}>{yen(net)}</td>
           </tr>
         );
       })}
