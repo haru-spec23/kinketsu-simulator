@@ -140,7 +140,10 @@ function buildThisPeriodEvents(items, settings, now = new Date()) {
 
 export default function App() {
   const [state, setState] = useState(() => loadState() ?? defaultState());
-  const [showAdd, setShowAdd] = useState(false);
+ const [initialBalance, setInitialBalance] = useState(() => {
+  const v = localStorage.getItem("initialBalance");
+  return v ? Number(v) : 0;
+});
   const [sortMode, setSortMode] = useState("dateAsc"); // "dateAsc" | "dateDesc"
   const [editing, setEditing] = useState(null); // item or null
 
@@ -148,7 +151,10 @@ export default function App() {
   useEffect(() => {
     saveState(state);
   }, [state]);
-
+useEffect(() => {
+  localStorage.setItem("initialBalance", String(initialBalance));
+}, [initialBalance]);
+  
   const expenseItems = useMemo(() => state.items.filter((x) => kind(x) === "expense"), [state.items]);
   const incomeItems = useMemo(() => state.items.filter((x) => kind(x) === "income"), [state.items]);
 
@@ -223,9 +229,22 @@ const periodLabel = useMemo(() => {
 
   // 残高シミュ用（まだ「初期残高」は未入力なので、まずは0スタートで“マイナス日が出るか”を見る）
   const thisEvents = useMemo(() => buildThisPeriodEvents(state.items, state.settings, new Date()), [state.items, state.settings]);
-  const running = useMemo(() => {
-    let bal = 0;
-    let firstNegative = null;
+const running = useMemo(() => {
+  let bal = initialBalance;
+  let firstNegative = null;
+  let minBalance = initialBalance;
+
+  const rows = thisEvents.map((ev) => {
+    bal += ev.signedAmount;
+    if (bal < minBalance) minBalance = bal;
+    if (firstNegative == null && bal < 0) {
+      firstNegative = ev.date;
+    }
+    return { ...ev, balance: bal };
+  });
+
+  return { rows, firstNegative, minBalance };
+}, [thisEvents, initialBalance]);
 
     const rows = thisEvents.map((ev) => {
       bal += ev.signedAmount;
@@ -245,6 +264,18 @@ const periodLabel = useMemo(() => {
 
       <section className="card">
        <h2 style={{ margin: "0 0 8px" }}>{periodLabel}（収支）</h2>
+        <div style={{ marginBottom: 10 }}>
+  <label>
+    今月開始時の残高：
+    <input
+      type="number"
+      value={initialBalance}
+      onChange={(e) => setInitialBalance(Number(e.target.value))}
+      style={{ marginLeft: 8, padding: 6, borderRadius: 8 }}
+    />
+    円
+  </label>
+</div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <MiniStat label="支出合計" value={yen(expenseThisMonth)} />
@@ -252,7 +283,38 @@ const periodLabel = useMemo(() => {
           <MiniStat label="差し引き" value={yen(netThisMonth)} />
         </div>
 
-        {running.firstNegative && (
+       {running.firstNegative ? (
+  <div
+    style={{
+      marginTop: 12,
+      padding: 10,
+      borderRadius: 12,
+      border: "1px solid rgba(255,107,107,0.55)",
+      background: "rgba(255,107,107,0.08)",
+    }}
+  >
+    ⚠️ 残高は
+    {" "}
+    {`${running.firstNegative.getMonth() + 1}月${running.firstNegative.getDate()}日`}
+    {" "}
+    にマイナスになります
+  </div>
+) : (
+  <div
+    style={{
+      marginTop: 12,
+      padding: 10,
+      borderRadius: 12,
+      border: "1px solid rgba(74,222,128,0.55)",
+      background: "rgba(74,222,128,0.08)",
+    }}
+  >
+    ✅ 今月は残高がマイナスになりません
+    <div style={{ fontSize: 12, opacity: 0.8 }}>
+      最低残高：{yen(running.minBalance)}
+    </div>
+  </div>
+)}
           <div style={{ marginTop: 12, padding: 10, borderRadius: 12, border: "1px solid rgba(255,107,107,0.55)" }}>
             ⚠️ 0円スタートで計算すると、{" "}
             {`${running.firstNegative.getFullYear()}-${String(running.firstNegative.getMonth() + 1).padStart(2, "0")}-${String(
