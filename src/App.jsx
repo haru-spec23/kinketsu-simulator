@@ -230,12 +230,24 @@ export default function App() {
         <div style={{ height: 140, display: "flex", alignItems: "flex-end", gap: 4, padding: "20px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
           {running.rows.length === 0 ? <div style={{ opacity: 0.5, fontSize: 12 }}>予定されているイベントがありません</div> : 
             running.rows.map((ev, i) => {
-              const maxVal = Math.max(...running.rows.map(r => r.balance), initialBalance, 1);
-              const minVal = Math.min(...running.rows.map(r => r.balance), 0);
-              const range = maxVal - minVal;
+             const balances = running.rows.map(r => r.balance);
+const maxVal = Math.max(...balances, initialBalance, 1);
+const minVal = Math.min(...balances, initialBalance, 0);
+const range = Math.max(1, maxVal - minVal); // 0割防止
               const heightPercent = ((ev.balance - minVal) / range) * 100;
               return (
-                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+               <div
+  key={i}
+  style={{
+    flex: 1,
+    height: "100%",              // ★追加
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-end",  // ★追加
+    position: "relative"
+  }}
+>
                   <div style={{ width: "100%", height: `${Math.max(5, heightPercent)}%`, background: ev.balance < 0 ? "#f87171" : "#3b82f6", borderRadius: "4px 4px 0 0", transition: "height 0.3s ease" }} title={`${fmtJP(ev.date)}: ${yen(ev.balance)}`} />
                   {(i === 0 || i === running.rows.length - 1 || i === Math.floor(running.rows.length / 2)) && (
                     <span style={{ fontSize: 10, opacity: 0.6, position: "absolute", bottom: -20, whiteSpace: "nowrap" }}>{ev.date.getDate()}日</span>
