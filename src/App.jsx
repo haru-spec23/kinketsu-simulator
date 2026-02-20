@@ -226,7 +226,51 @@ export default function App() {
     let bal = initialBalance;
     let firstNegative = null;
     let minBalance = initialBalance;
+{/* --- グラフセクションの追加 --- */}
+<section className="card">
+  <h2 style={{ margin: "0 0 12px" }}>残高推移（今月）</h2>
+  <div style={{ 
+    height: 160, 
+    display: "flex", 
+    alignItems: "flex-end", 
+    gap: 4, 
+    padding: "20px 0",
+    borderBottom: "1px solid rgba(255,255,255,0.1)"
+  }}>
+    {running.rows.map((ev, i) => {
+      // グラフの高さ計算（最大残高を100%とする）
+      const maxVal = Math.max(...running.rows.map(r => r.balance), initialBalance, 1);
+      const minVal = Math.min(...running.rows.map(r => r.balance), 0);
+      const range = maxVal - minVal;
+      
+      const heightPercent = ((ev.balance - minVal) / range) * 100;
+      const isNegative = ev.balance < 0;
 
+      return (
+        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+          {/* 残高バー */}
+          <div style={{
+            width: "100%",
+            height: `${Math.max(5, heightPercent)}%`, // 最低でも少し高さを出す
+            background: isNegative ? "#f87171" : "#3b82f6",
+            borderRadius: "4px 4px 0 0",
+            transition: "all 0.3s ease",
+          }} title={`${fmtJP(ev.date)}: ${yen(ev.balance)}`} />
+          
+          {/* 日付ラベル（間引いて表示） */}
+          {(i === 0 || i === running.rows.length - 1 || i === Math.floor(running.rows.length / 2)) && (
+            <span style={{ fontSize: 10, opacity: 0.6, position: "absolute", bottom: -20, whiteSpace: "nowrap" }}>
+              {ev.date.getDate()}日
+            </span>
+          )}
+        </div>
+      );
+    })}
+  </div>
+  <div style={{ marginTop: 25, fontSize: 12, opacity: 0.7, textAlign: "center" }}>
+    青: プラス残高 / 赤: マイナス（金欠）
+  </div>
+</section>
     const rows = thisEvents.map((ev) => {
       bal += ev.signedAmount;
       if (bal < minBalance) minBalance = bal;
