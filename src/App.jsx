@@ -147,8 +147,6 @@ export default function App() {
     const v = localStorage.getItem("initialBalance");
     return v ? Number(v) : 0;
   });
-  const [sortMode, setSortMode] = useState("dateAsc"); // "dateAsc" | "dateDesc"
-  const [editing, setEditing] = useState(null); // item or null
 
   // 保存
   useEffect(() => {
@@ -282,7 +280,7 @@ const periodLabel = useMemo(() => {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <MiniStat label="支出合計" value={yen(expenseThisMonth)} />
           <MiniStat label="収入合計" value={yen(incomeThisMonth)} />
-          <MiniStat label="差し引き" value={yen(netThisMonth)} />
+          <MiniStat label="差し引き" value={yen(netThisMonth)} color={getAmountColor(netThisMonth)} />
         </div>
 
        {running.firstNegative ? (
@@ -317,14 +315,7 @@ const periodLabel = useMemo(() => {
     </div>
   </div>
 )}
-          <div style={{ marginTop: 12, padding: 10, borderRadius: 12, border: "1px solid rgba(255,107,107,0.55)" }}>
-            ⚠️ 0円スタートで計算すると、{" "}
-            {`${running.firstNegative.getFullYear()}-${String(running.firstNegative.getMonth() + 1).padStart(2, "0")}-${String(
-              running.firstNegative.getDate()
-            ).padStart(2, "0")}`}
-            {" "}に残高がマイナスになります
-          </div>
-        )}
+         
 
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" className="btn btnPrimary" onClick={() => setShowAdd(true)}>
@@ -760,11 +751,12 @@ const [endDate, setEndDate] = useState(
   );
 }
 
-function MiniStat({ label, value }) {
+// コードの一番下
+function MiniStat({ label, value, color }) {
   return (
     <div style={{ border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, padding: 10 }}>
       <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 800 }}>{value}</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: color || "inherit" }}>{value}</div>
     </div>
   );
 }
