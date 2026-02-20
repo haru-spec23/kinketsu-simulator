@@ -224,41 +224,91 @@ export default function App() {
         </div>
       </section>
 
-      {/* ★追加：グラフセクション（ここに入ります）★ */}
-      <section className="card">
-        <h2 style={{ margin: "0 0 12px" }}>残高推移（今月）</h2>
-        <div style={{ height: 140, display: "flex", alignItems: "flex-end", gap: 4, padding: "20px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          {running.rows.length === 0 ? <div style={{ opacity: 0.5, fontSize: 12 }}>予定されているイベントがありません</div> : 
-            running.rows.map((ev, i) => {
-             const balances = running.rows.map(r => r.balance);
-const maxVal = Math.max(...balances, initialBalance, 1);
-const minVal = Math.min(...balances, initialBalance, 0);
-const range = Math.max(1, maxVal - minVal); // 0割防止
-              const heightPercent = ((ev.balance - minVal) / range) * 100;
-              return (
-               <div
-  key={i}
-  style={{
-    flex: 1,
-    height: "100%",              // ★追加
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "flex-end",  // ★追加
-    position: "relative"
-  }}
->
-                  <div style={{ width: "100%", height: `${Math.max(5, heightPercent)}%`, background: ev.balance < 0 ? "#f87171" : "#3b82f6", borderRadius: "4px 4px 0 0", transition: "height 0.3s ease" }} title={`${fmtJP(ev.date)}: ${yen(ev.balance)}`} />
-                  {(i === 0 || i === running.rows.length - 1 || i === Math.floor(running.rows.length / 2)) && (
-                    <span style={{ fontSize: 10, opacity: 0.6, position: "absolute", bottom: -20, whiteSpace: "nowrap" }}>{ev.date.getDate()}日</span>
-                  )}
-                </div>
-              );
-            })
-          }
-        </div>
-      </section>
+ <section className="card">
+  <h2 style={{ margin: "0 0 12px" }}>残高推移（今月）</h2>
 
+  {running.rows.length === 0 ? (
+    <div style={{ opacity: 0.5, fontSize: 12 }}>予定されているイベントがありません</div>
+  ) : (
+    <LineChart rows={running.rows} initialBalance={initialBalance} />
+  )}
+</section>
+function LineChart({ rows, initialBalance }) {
+  const width = 640;
+  const height = 180;
+  const pad = 16;
+
+  const balances = rows.map((r) => r.balance);
+  const maxVal = Math.max(...balances, initialBalance, 1);
+  const minVal = Math.min(...balances, initialBalance, 0);
+  const range = Math.max(1, maxVal - minVal);
+
+  const n = rows.length;
+
+  const xAt = (i) => (n === 1 ? width / 2 : pad + (i * (width - pad * 2)) / (n - 1));
+  const yAt = (val) => pad + (1 - (val - minVal) / range) * (height - pad * 2);
+
+  const points = rows
+    .map((r, i) => `${xAt(i).toFixed(2)},${yAt(r.balance).toFixed(2)}`)
+    .join(" ");
+
+  const zeroY = yAt(0);
+  const startY = yAt(initialBalance);
+
+  return (
+    <div style={{ width: "100%", overflowX: "auto" }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ width: "100%", height: 220, display: "block" }}
+      >
+        {/* 0円ライン */}
+        <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.18)" />
+
+        {/* 初期残高ライン */}
+        <line x1="0" y1={startY} x2={width} y2={startY} stroke="rgba(255,255,255,0.08)" />
+
+        {/* 折れ線 */}
+        <polyline
+          fill="none"
+          stroke="rgba(59,130,246,0.95)"
+          strokeWidth="3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          points={points}
+        />
+
+        {/* 点 */}
+        {rows.map((r, i) => {
+          const cx = xAt(i);
+          const cy = yAt(r.balance);
+          const neg = r.balance < 0;
+          return (
+            <g key={i}>
+              <circle cx={cx} cy={cy} r="4.5" fill={neg ? "rgba(248,113,113,0.95)" : "rgba(255,255,255,0.9)"} />
+              {/* ざっくり日付ラベル（最初/真ん中/最後） */}
+              {(i === 0 || i === n - 1 || i === Math.floor(n / 2)) && (
+                <text
+                  x={cx}
+                  y={height - 6}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="rgba(255,255,255,0.55)"
+                >
+                  {r.date.getDate()}日
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* 参考: 最低残高 */}
+      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
+        最低残高：{yen(running.minBalance)}
+      </div>
+    </div>
+  );
+}
       {/* --- モーダル --- */}
       {(showAdd || editing) && (
         <div className="modalOverlay" onMouseDown={() => { setShowAdd(false); setEditing(null); }} style={{ background: "rgba(0,0,0,0.82)" }}>
