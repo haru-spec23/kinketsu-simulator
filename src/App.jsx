@@ -228,33 +228,32 @@ const periodLabel = useMemo(() => {
 }, [start, endInclusive]);
 
   // 残高シミュ用（まだ「初期残高」は未入力なので、まずは0スタートで“マイナス日が出るか”を見る）
+// 修正版：残高シミュレーションロジック
   const thisEvents = useMemo(() => buildThisPeriodEvents(state.items, state.settings, new Date()), [state.items, state.settings]);
-const running = useMemo(() => {
-  let bal = initialBalance;
-  let firstNegative = null;
-  let minBalance = initialBalance;
 
-  const rows = thisEvents.map((ev) => {
-    bal += ev.signedAmount;
-    if (bal < minBalance) minBalance = bal;
-    if (firstNegative == null && bal < 0) {
-      firstNegative = ev.date;
-    }
-    return { ...ev, balance: bal };
-  });
-
-  return { rows, firstNegative, minBalance };
-}, [thisEvents, initialBalance]);
+  const running = useMemo(() => {
+    let bal = initialBalance;
+    let firstNegative = null;
+    let minBalance = initialBalance;
 
     const rows = thisEvents.map((ev) => {
       bal += ev.signedAmount;
-      if (firstNegative == null && bal < 0) firstNegative = ev.date;
+      if (bal < minBalance) minBalance = bal;
+      if (firstNegative == null && bal < 0) {
+        firstNegative = ev.date;
+      }
       return { ...ev, balance: bal };
     });
 
-    return { rows, firstNegative };
-  }, [thisEvents]);
+    return { rows, firstNegative, minBalance };
+  }, [thisEvents, initialBalance]);
 
+  // ヘルパー関数：金額に応じた色を返す（追加要望4への準備）
+  const getAmountColor = (val) => {
+    if (val > 0) return "#4ade80"; // 緑
+    if (val < 0) return "#f87171"; // 赤
+    return "inherit";
+  };
   return (
     <main className="container">
       <header style={{ marginBottom: 16 }}>
