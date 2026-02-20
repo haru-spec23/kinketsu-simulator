@@ -140,10 +140,13 @@ function buildThisPeriodEvents(items, settings, now = new Date()) {
 
 export default function App() {
   const [state, setState] = useState(() => loadState() ?? defaultState());
- const [initialBalance, setInitialBalance] = useState(() => {
-  const v = localStorage.getItem("initialBalance");
-  return v ? Number(v) : 0;
-});
+  const [showAdd, setShowAdd] = useState(false);
+  const [sortMode, setSortMode] = useState("dateAsc");
+  const [editing, setEditing] = useState(null);
+  const [initialBalance, setInitialBalance] = useState(() => {
+    const v = localStorage.getItem("initialBalance");
+    return v ? Number(v) : 0;
+  });
   const [sortMode, setSortMode] = useState("dateAsc"); // "dateAsc" | "dateDesc"
   const [editing, setEditing] = useState(null); // item or null
 
