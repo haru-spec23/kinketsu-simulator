@@ -68,9 +68,7 @@ function dayLabel(it) {
   return "-";
 }
 
-// 並び替え用のキー（MVP版）
-// one_time: payDate
-// recurring: 今月のpayDayで並べる（残高シミュのイベント生成で後で強化できる）
+// 並び替え用のキー
 function sortKeyTime(it) {
   if (it.cycle === "one_time") {
     return it.payDate ? new Date(it.payDate).getTime() : Number.POSITIVE_INFINITY;
@@ -83,7 +81,6 @@ function sortKeyTime(it) {
 // 今月のイベント（簡易）を作る：残高シミュの第一歩
 function buildThisPeriodEvents(items, settings, now = new Date()) {
   const { start, endExclusive } = getMonthPeriod(now, settings.monthStartDay);
-
   const events = [];
 
   for (const it of items) {
@@ -108,8 +105,7 @@ function buildThisPeriodEvents(items, settings, now = new Date()) {
       continue;
     }
 
-    // recurring（monthly/yearly）：この期間に「支払日が存在するか」だけ見る簡易版
-    // 期間が2ヶ月跨るので、期間start月とend-1日月の2候補をチェック
+    // recurring
     const a = start;
     const b = new Date(endExclusive.getFullYear(), endExclusive.getMonth(), endExclusive.getDate() - 1);
 
@@ -121,8 +117,6 @@ function buildThisPeriodEvents(items, settings, now = new Date()) {
     const payDate = candidates.find((d) => isWithin(d, start, endExclusive));
     if (!payDate) continue;
 
-    // 年額はモードにより扱いが変わるが、イベント生成は「発生月に置く」(cashflow相当)でOK
-    // forecast（月割り）はイベント化ではなく、月集計向け。残高推移は基本 cashflow 的にするのが自然。
     if (it.cycle === "monthly" || it.cycle === "yearly") {
       events.push({
         date: payDate,
@@ -143,7 +137,7 @@ export default function App() {
   const [showAdd, setShowAdd] = useState(false);
   const [sortMode, setSortMode] = useState("dateAsc");
   const [editing, setEditing] = useState(null);
-  const [filterMode, setFilterMode] = useState("all"); // "all" | "expense" | "income"
+  const [filterMode, setFilterMode] = useState("all");
   const [initialBalance, setInitialBalance] = useState(() => {
     const v = localStorage.getItem("initialBalance");
     return v ? Number(v) : 0;
@@ -153,9 +147,10 @@ export default function App() {
   useEffect(() => {
     saveState(state);
   }, [state]);
-useEffect(() => {
-  localStorage.setItem("initialBalance", String(initialBalance));
-}, [initialBalance]);
+
+  useEffect(() => {
+    localStorage.setItem("initialBalance", String(initialBalance));
+  }, [initialBalance]);
   
   const expenseItems = useMemo(() => state.items.filter((x) => kind(x) === "expense"), [state.items]);
   const incomeItems = useMemo(() => state.items.filter((x) => kind(x) === "income"), [state.items]);
@@ -171,71 +166,60 @@ useEffect(() => {
   const netThisMonth = useMemo(() => incomeThisMonth - expenseThisMonth, [incomeThisMonth, expenseThisMonth]);
 
   const year = new Date().getFullYear();
-  const byMonth = useMemo(() => {
-    // 年間支払い（既存仕様どおり：支出のみを表示）
+
+  const expenseByMonth = useMemo(() => {
     return calcYearByMonth(expenseItems, year, state.settings.yearlyMode);
   }, [expenseItems, year, state.settings.yearlyMode]);
 
-  const expenseByMonth = useMemo(() => {
-  return calcYearByMonth(expenseItems, year, state.settings.yearlyMode);
-}, [expenseItems, year, state.settings.yearlyMode]);
+  const incomeByMonth = useMemo(() => {
+    return calcYearByMonth(incomeItems, year, state.settings.yearlyMode);
+  }, [incomeItems, year, state.settings.yearlyMode]);
 
-const incomeByMonth = useMemo(() => {
-  // 年間の「収入」を出したいので incomeItems を渡す
-  return calcYearByMonth(incomeItems, year, state.settings.yearlyMode);
-}, [incomeItems, year, state.settings.yearlyMode]);
+  const netByMonth = useMemo(() => {
+    return expenseByMonth.map((v, i) => incomeByMonth[i] - v);
+  }, [expenseByMonth, incomeByMonth]);
 
-const netByMonth = useMemo(() => {
-  return expenseByMonth.map((v, i) => incomeByMonth[i] - v);
-}, [expenseByMonth, incomeByMonth]);
-
-const expenseYearTotal = useMemo(() => expenseByMonth.reduce((a, b) => a + b, 0), [expenseByMonth]);
-const incomeYearTotal = useMemo(() => incomeByMonth.reduce((a, b) => a + b, 0), [incomeByMonth]);
-const netYearTotal = useMemo(() => netByMonth.reduce((a, b) => a + b, 0), [netByMonth]);
+  const expenseYearTotal = useMemo(() => expenseByMonth.reduce((a, b) => a + b, 0), [expenseByMonth]);
+  const incomeYearTotal = useMemo(() => incomeByMonth.reduce((a, b) => a + b, 0), [incomeByMonth]);
+  const netYearTotal = useMemo(() => netByMonth.reduce((a, b) => a + b, 0), [netByMonth]);
   
-  const yearTotal = useMemo(() => byMonth.reduce((a, b) => a + b, 0), [byMonth]);
-
-const sortedItems = useMemo(() => {
-    // 1. まず filterMode に応じて絞り込む
+  const sortedItems = useMemo(() => {
     let arr = [...state.items];
     if (filterMode === "expense") arr = arr.filter(x => kind(x) === "expense");
     if (filterMode === "income") arr = arr.filter(x => kind(x) === "income");
 
-    // 2. その後、並び替える
     arr.sort((a, b) => {
       const ka = sortKeyTime(a);
       const kb = sortKeyTime(b);
       return sortMode === "dateAsc" ? ka - kb : kb - ka;
     });
     return arr;
-  }, [state.items, sortMode, filterMode]); // ← filterMode も監視対象に追加
+  }, [state.items, sortMode, filterMode]);
 
   const monthStartDay = state.settings.monthStartDay;
 
   const now = new Date();
-const { start, endExclusive } = useMemo(
-  () => getMonthPeriod(now, monthStartDay),
-  [now, monthStartDay]
-);
+  const { start, endExclusive } = useMemo(
+    () => getMonthPeriod(now, monthStartDay),
+    [now, monthStartDay]
+  );
 
-// endExclusive の前日を作る
-const endInclusive = useMemo(() => {
-  const d = new Date(endExclusive);
-  d.setDate(d.getDate() - 1);
-  return d;
-}, [endExclusive]);
+  const endInclusive = useMemo(() => {
+    const d = new Date(endExclusive);
+    d.setDate(d.getDate() - 1);
+    return d;
+  }, [endExclusive]);
 
-function fmtJP(d) {
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
-}
+  function fmtJP(d) {
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+  }
 
-const periodLabel = useMemo(() => {
-  const m = start.getMonth() + 1;
-  return `${m}月（${fmtJP(start)}～${fmtJP(endInclusive)}）`;
-}, [start, endInclusive]);
+  const periodLabel = useMemo(() => {
+    const m = start.getMonth() + 1;
+    return `${m}月（${fmtJP(start)}～${fmtJP(endInclusive)}）`;
+  }, [start, endInclusive]);
 
-  // 残高シミュ用（まだ「初期残高」は未入力なので、まずは0スタートで“マイナス日が出るか”を見る）
-// 修正版：残高シミュレーションロジック
+  // 残高シミュレーションロジック
   const thisEvents = useMemo(() => buildThisPeriodEvents(state.items, state.settings, new Date()), [state.items, state.settings]);
 
   const running = useMemo(() => {
@@ -255,12 +239,12 @@ const periodLabel = useMemo(() => {
     return { rows, firstNegative, minBalance };
   }, [thisEvents, initialBalance]);
 
-  // ヘルパー関数：金額に応じた色を返す（追加要望4への準備）
   const getAmountColor = (val) => {
-    if (val > 0) return "#4ade80"; // 緑
-    if (val < 0) return "#f87171"; // 赤
+    if (val > 0) return "#4ade80";
+    if (val < 0) return "#f87171";
     return "inherit";
   };
+
   return (
     <main className="container">
       <header style={{ marginBottom: 16 }}>
@@ -269,19 +253,19 @@ const periodLabel = useMemo(() => {
       </header>
 
       <section className="card">
-       <h2 style={{ margin: "0 0 8px" }}>{periodLabel}（収支）</h2>
+        <h2 style={{ margin: "0 0 8px" }}>{periodLabel}（収支）</h2>
         <div style={{ marginBottom: 10 }}>
-  <label>
-    今月開始時の残高：
-    <input
-      type="number"
-      value={initialBalance}
-      onChange={(e) => setInitialBalance(Number(e.target.value))}
-      style={{ marginLeft: 8, padding: 6, borderRadius: 8 }}
-    />
-    円
-  </label>
-</div>
+          <label>
+            今月開始時の残高：
+            <input
+              type="number"
+              value={initialBalance}
+              onChange={(e) => setInitialBalance(Number(e.target.value))}
+              style={{ marginLeft: 8, padding: 6, borderRadius: 8 }}
+            />
+            円
+          </label>
+        </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <MiniStat label="支出合計" value={yen(expenseThisMonth)} />
@@ -289,39 +273,38 @@ const periodLabel = useMemo(() => {
           <MiniStat label="差し引き" value={yen(netThisMonth)} color={getAmountColor(netThisMonth)} />
         </div>
 
-       {running.firstNegative ? (
-  <div
-    style={{
-      marginTop: 12,
-      padding: 10,
-      borderRadius: 12,
-      border: "1px solid rgba(255,107,107,0.55)",
-      background: "rgba(255,107,107,0.08)",
-    }}
-  >
-    ⚠️ 残高は
-    {" "}
-    {`${running.firstNegative.getMonth() + 1}月${running.firstNegative.getDate()}日`}
-    {" "}
-    にマイナスになります
-  </div>
-) : (
-  <div
-    style={{
-      marginTop: 12,
-      padding: 10,
-      borderRadius: 12,
-      border: "1px solid rgba(74,222,128,0.55)",
-      background: "rgba(74,222,128,0.08)",
-    }}
-  >
-    ✅ 今月は残高がマイナスになりません
-    <div style={{ fontSize: 12, opacity: 0.8 }}>
-      最低残高：{yen(running.minBalance)}
-    </div>
-  </div>
-)}
-         
+        {running.firstNegative ? (
+          <div
+            style={{
+              marginTop: 12,
+              padding: 10,
+              borderRadius: 12,
+              border: "1px solid rgba(255,107,107,0.55)",
+              background: "rgba(255,107,107,0.08)",
+            }}
+          >
+            ⚠️ 残高は
+            {" "}
+            {`${running.firstNegative.getMonth() + 1}月${running.firstNegative.getDate()}日`}
+            {" "}
+            にマイナスになります
+          </div>
+        ) : (
+          <div
+            style={{
+              marginTop: 12,
+              padding: 10,
+              borderRadius: 12,
+              border: "1px solid rgba(74,222,128,0.55)",
+              background: "rgba(74,222,128,0.08)",
+            }}
+          >
+            ✅ 今月は残高がマイナスになりません
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
+              最低残高：{yen(running.minBalance)}
+            </div>
+          </div>
+        )}
 
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" className="btn btnPrimary" onClick={() => setShowAdd(true)}>
@@ -391,10 +374,9 @@ const periodLabel = useMemo(() => {
         </div>
       )}
 
-     <section className="card">
+      <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>一覧</h2>
 
-        {/* 外側のdivを消して、以下のdivだけにする */}
         <div style={{ marginBottom: 10, display: "flex", gap: 15, flexWrap: "wrap" }}>
           <label>
             表示：
@@ -413,11 +395,6 @@ const periodLabel = useMemo(() => {
             </select>
           </label>
         </div>
-
-        {sortedItems.length === 0 ? (
-          <div style={{ opacity: 0.75 }}>まだありません</div>
-// ...以下そのまま
-  
 
         {sortedItems.length === 0 ? (
           <div style={{ opacity: 0.75 }}>まだありません</div>
@@ -487,45 +464,45 @@ const periodLabel = useMemo(() => {
         )}
       </section>
 
-<section className="card">
-  <h2 style={{ margin: "0 0 8px" }}>{year}年（1〜12月）</h2>
+      <section className="card">
+        <h2 style={{ margin: "0 0 8px" }}>{year}年（1〜12月）</h2>
 
-<div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
-  支出：<b style={{ color: "#f87171" }}>{yen(expenseYearTotal)}</b> ／ 
-  収入：<b style={{ color: "#4ade80" }}>{yen(incomeYearTotal)}</b> ／ 
-  収支：<b style={{ color: getAmountColor(netYearTotal) }}>{yen(netYearTotal)}</b>
-  （年額モード：{state.settings.yearlyMode}）
-</div>
+        <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
+          支出：<b style={{ color: "#f87171" }}>{yen(expenseYearTotal)}</b> ／ 
+          収入：<b style={{ color: "#4ade80" }}>{yen(incomeYearTotal)}</b> ／ 
+          収支：<b style={{ color: getAmountColor(netYearTotal) }}>{yen(netYearTotal)}</b>
+          （年額モード：{state.settings.yearlyMode}）
+        </div>
 
-  <table className="table">
-    <thead>
-      <tr>
-        <th>月</th>
-        <th>支出</th>
-        <th>収入</th>
-        <th>収支</th>
-      </tr>
-    </thead>
-    <tbody>
-      {expenseByMonth.map((ex, i) => {
-        const inc = incomeByMonth[i];
-        const net = netByMonth[i];
-        return (
-          <tr key={i}>
-            <td>{i + 1}月</td>
-            <td className="mono" style={{ color: "#f87171", fontWeight: 700 }}>{yen(ex)}</td>
-            <td className="mono" style={{ color: "#4ade80", fontWeight: 700 }}>{yen(inc)}</td>
-           <td className="mono" style={{ fontWeight: 800, color: getAmountColor(net) }}>{yen(net)}</td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>月</th>
+              <th>支出</th>
+              <th>収入</th>
+              <th>収支</th>
+            </tr>
+          </thead>
+          <tbody>
+            {expenseByMonth.map((ex, i) => {
+              const inc = incomeByMonth[i];
+              const net = netByMonth[i];
+              return (
+                <tr key={i}>
+                  <td>{i + 1}月</td>
+                  <td className="mono" style={{ color: "#f87171", fontWeight: 700 }}>{yen(ex)}</td>
+                  <td className="mono" style={{ color: "#4ade80", fontWeight: 700 }}>{yen(inc)}</td>
+                  <td className="mono" style={{ fontWeight: 800, color: getAmountColor(net) }}>{yen(net)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-  <div style={{ fontSize: 12, opacity: 0.75, marginTop: 10 }}>
-    ※ この表は暦月（1日〜末日）で集計しています。
-  </div>
-</section>
+        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 10 }}>
+          ※ この表は暦月（1日〜末日）で集計しています。
+        </div>
+      </section>
 
       <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>設定</h2>
@@ -576,73 +553,68 @@ const periodLabel = useMemo(() => {
 function AddForm({ onSave, onCancel, initialItem }) {
   const [type, setType] = useState(initialItem?.type ?? "expense");
 
-  // expense categories / income categories を分ける
   const defaultCat = (initialItem?.category ?? (type === "income" ? "salary" : "fixed"));
   const [category, setCategory] = useState(defaultCat);
 
   const [name, setName] = useState(initialItem?.name ?? "");
   const [amount, setAmount] = useState(initialItem ? String(initialItem.amount) : "");
 
-  // cycle
   const [cycle, setCycle] = useState(initialItem?.cycle ?? "monthly");
 
   const [payDay, setPayDay] = useState(initialItem?.payDay == null ? "" : String(initialItem.payDay));
- const [startDate, setStartDate] = useState(initialItem?.startDate ?? todayISO());
-const [endDate, setEndDate] = useState(
-  (initialItem?.endDate ?? initialItem?.startDate) ?? todayISO()
-);
+  const [startDate, setStartDate] = useState(initialItem?.startDate ?? todayISO());
+  const [endDate, setEndDate] = useState(
+    (initialItem?.endDate ?? initialItem?.startDate) ?? todayISO()
+  );
   const [payDate, setPayDate] = useState(initialItem?.payDate ?? todayISO());
 
   const isInitialExpense = type === "expense" && category === "initial";
   const isOneTime = type === "income" ? cycle === "one_time" : isInitialExpense;
 
-  // 初期費用は強制 one_time
   useEffect(() => {
     if (isInitialExpense) setCycle("one_time");
   }, [isInitialExpense]);
 
-  // 種別切替時にカテゴリのデフォルトを合わせる（見た目用）
   useEffect(() => {
-    if (initialItem) return; // 編集時は変えない
+    if (initialItem) return;
     setCategory(type === "income" ? "salary" : "fixed");
-  }, [type]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [type]);
 
- function submit(e) {
-  e.preventDefault();
-  const amt = Number(amount);
-  if (!name.trim()) return alert("項目名を入れてね");
-  if (!Number.isFinite(amt) || amt <= 0) return alert("金額は正の数で入れてね");
+  function submit(e) {
+    e.preventDefault();
+    const amt = Number(amount);
+    if (!name.trim()) return alert("項目名を入れてね");
+    if (!Number.isFinite(amt) || amt <= 0) return alert("金額は正の数で入れてね");
 
-  // ★ ここに追加
-  const singleDay = !!startDate && !!endDate && startDate === endDate;
+    const singleDay = !!startDate && !!endDate && startDate === endDate;
 
-  let finalCycle = isOneTime ? "one_time" : cycle;
+    let finalCycle = isOneTime ? "one_time" : cycle;
 
-  if (!isOneTime && singleDay) {
-    finalCycle = "one_time";
+    if (!isOneTime && singleDay) {
+      finalCycle = "one_time";
+    }
+
+    const item = {
+      id: initialItem?.id ?? uid(),
+      type,
+      name: name.trim(),
+      amount: Math.round(amt),
+      category,
+      cycle: finalCycle,
+
+      payDate: finalCycle === "one_time" ? (payDate ?? startDate) : null,
+      payDay: finalCycle === "one_time"
+        ? null
+        : (payDay
+            ? Math.max(1, Math.min(31, Math.trunc(Number(payDay))))
+            : null),
+
+      startDate: finalCycle === "one_time" ? null : startDate,
+      endDate: finalCycle === "one_time" ? null : (endDate || null),
+    };
+
+    onSave(item);
   }
-
-  const item = {
-    id: initialItem?.id ?? uid(),
-    type,
-    name: name.trim(),
-    amount: Math.round(amt),
-    category,
-    cycle: finalCycle,
-
-    payDate: finalCycle === "one_time" ? (payDate ?? startDate) : null,
-    payDay: finalCycle === "one_time"
-      ? null
-      : (payDay
-          ? Math.max(1, Math.min(31, Math.trunc(Number(payDay))))
-          : null),
-
-    startDate: finalCycle === "one_time" ? null : startDate,
-    endDate: finalCycle === "one_time" ? null : (endDate || null),
-  };
-
-  onSave(item);
-}
 
   const payWord = type === "income" ? "入金" : "引き落とし";
 
@@ -687,7 +659,6 @@ const [endDate, setEndDate] = useState(
         </label>
       </div>
 
-      {/* cycle / date controls */}
       {type === "income" ? (
         <>
           <label>
@@ -727,7 +698,6 @@ const [endDate, setEndDate] = useState(
         </>
       ) : (
         <>
-          {/* expense */}
           {!isInitialExpense ? (
             <>
               <label>
@@ -776,7 +746,6 @@ const [endDate, setEndDate] = useState(
   );
 }
 
-// コードの一番下
 function MiniStat({ label, value, color }) {
   return (
     <div style={{ border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, padding: 10 }}>
