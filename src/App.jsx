@@ -143,6 +143,7 @@ export default function App() {
   const [showAdd, setShowAdd] = useState(false);
   const [sortMode, setSortMode] = useState("dateAsc");
   const [editing, setEditing] = useState(null);
+  const [filterMode, setFilterMode] = useState("all"); // "all" | "expense" | "income"
   const [initialBalance, setInitialBalance] = useState(() => {
     const v = localStorage.getItem("initialBalance");
     return v ? Number(v) : 0;
@@ -194,15 +195,20 @@ const netYearTotal = useMemo(() => netByMonth.reduce((a, b) => a + b, 0), [netBy
   
   const yearTotal = useMemo(() => byMonth.reduce((a, b) => a + b, 0), [byMonth]);
 
-  const sortedItems = useMemo(() => {
-    const arr = [...state.items];
+const sortedItems = useMemo(() => {
+    // 1. まず filterMode に応じて絞り込む
+    let arr = [...state.items];
+    if (filterMode === "expense") arr = arr.filter(x => kind(x) === "expense");
+    if (filterMode === "income") arr = arr.filter(x => kind(x) === "income");
+
+    // 2. その後、並び替える
     arr.sort((a, b) => {
       const ka = sortKeyTime(a);
       const kb = sortKeyTime(b);
       return sortMode === "dateAsc" ? ka - kb : kb - ka;
     });
     return arr;
-  }, [state.items, sortMode]);
+  }, [state.items, sortMode, filterMode]); // ← filterMode も監視対象に追加
 
   const monthStartDay = state.settings.monthStartDay;
 
@@ -389,12 +395,25 @@ const periodLabel = useMemo(() => {
         <h2 style={{ margin: "0 0 8px" }}>一覧</h2>
 
         <div style={{ marginBottom: 10 }}>
-          並び替え：
-          <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} className="select" style={{ width: "auto", marginLeft: 8 }}>
-            <option value="dateAsc">日付が早い順</option>
-            <option value="dateDesc">日付が遅い順</option>
-          </select>
+          <div style={{ marginBottom: 10, display: "flex", gap: 15, flexWrap: "wrap" }}>
+          <label>
+            表示：
+            <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)} className="select" style={{ width: "auto", marginLeft: 8 }}>
+              <option value="all">すべて</option>
+              <option value="expense">支出のみ</option>
+              <option value="income">収入のみ</option>
+            </select>
+          </label>
+
+          <label>
+            並び替え：
+            <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} className="select" style={{ width: "auto", marginLeft: 8 }}>
+              <option value="dateAsc">日付が早い順</option>
+              <option value="dateDesc">日付が遅い順</option>
+            </select>
+          </label>
         </div>
+  
 
         {sortedItems.length === 0 ? (
           <div style={{ opacity: 0.75 }}>まだありません</div>
