@@ -233,82 +233,7 @@ export default function App() {
     <LineChart rows={running.rows} initialBalance={initialBalance} />
   )}
 </section>
-function LineChart({ rows, initialBalance }) {
-  const width = 640;
-  const height = 180;
-  const pad = 16;
 
-  const balances = rows.map((r) => r.balance);
-  const maxVal = Math.max(...balances, initialBalance, 1);
-  const minVal = Math.min(...balances, initialBalance, 0);
-  const range = Math.max(1, maxVal - minVal);
-
-  const n = rows.length;
-
-  const xAt = (i) => (n === 1 ? width / 2 : pad + (i * (width - pad * 2)) / (n - 1));
-  const yAt = (val) => pad + (1 - (val - minVal) / range) * (height - pad * 2);
-
-  const points = rows
-    .map((r, i) => `${xAt(i).toFixed(2)},${yAt(r.balance).toFixed(2)}`)
-    .join(" ");
-
-  const zeroY = yAt(0);
-  const startY = yAt(initialBalance);
-
-  return (
-    <div style={{ width: "100%", overflowX: "auto" }}>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        style={{ width: "100%", height: 220, display: "block" }}
-      >
-        {/* 0円ライン */}
-        <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.18)" />
-
-        {/* 初期残高ライン */}
-        <line x1="0" y1={startY} x2={width} y2={startY} stroke="rgba(255,255,255,0.08)" />
-
-        {/* 折れ線 */}
-        <polyline
-          fill="none"
-          stroke="rgba(59,130,246,0.95)"
-          strokeWidth="3"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          points={points}
-        />
-
-        {/* 点 */}
-        {rows.map((r, i) => {
-          const cx = xAt(i);
-          const cy = yAt(r.balance);
-          const neg = r.balance < 0;
-          return (
-            <g key={i}>
-              <circle cx={cx} cy={cy} r="4.5" fill={neg ? "rgba(248,113,113,0.95)" : "rgba(255,255,255,0.9)"} />
-              {/* ざっくり日付ラベル（最初/真ん中/最後） */}
-              {(i === 0 || i === n - 1 || i === Math.floor(n / 2)) && (
-                <text
-                  x={cx}
-                  y={height - 6}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fill="rgba(255,255,255,0.55)"
-                >
-                  {r.date.getDate()}日
-                </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* 参考: 最低残高 */}
-      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
-        最低残高：{yen(running.minBalance)}
-      </div>
-    </div>
-  );
-}
       {/* --- モーダル --- */}
       {(showAdd || editing) && (
         <div className="modalOverlay" onMouseDown={() => { setShowAdd(false); setEditing(null); }} style={{ background: "rgba(0,0,0,0.82)" }}>
@@ -470,11 +395,71 @@ function AddForm({ onSave, onCancel, initialItem }) {
   );
 }
 
-function MiniStat({ label, value, color }) {
+function LineChart({ rows, initialBalance }) {
+  const width = 640;
+  const height = 180;
+  const pad = 16;
+
+  const balances = rows.map((r) => r.balance);
+  const maxVal = Math.max(...balances, initialBalance, 1);
+  const minVal = Math.min(...balances, initialBalance, 0);
+  const range = Math.max(1, maxVal - minVal);
+
+  const n = rows.length;
+
+  const xAt = (i) => (n === 1 ? width / 2 : pad + (i * (width - pad * 2)) / (n - 1));
+  const yAt = (val) => pad + (1 - (val - minVal) / range) * (height - pad * 2);
+
+  const points = rows
+    .map((r, i) => `${xAt(i).toFixed(2)},${yAt(r.balance).toFixed(2)}`)
+    .join(" ");
+
+  const zeroY = yAt(0);
+  const startY = yAt(initialBalance);
+
   return (
-    <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: 10 }}>
-      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: color || "inherit" }}>{value}</div>
+    <div style={{ width: "100%", overflowX: "auto" }}>
+      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: 220, display: "block" }}>
+        <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.18)" />
+        <line x1="0" y1={startY} x2={width} y2={startY} stroke="rgba(255,255,255,0.08)" />
+
+        <polyline
+          fill="none"
+          stroke="rgba(59,130,246,0.95)"
+          strokeWidth="3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          points={points}
+        />
+
+        {rows.map((r, i) => {
+          const cx = xAt(i);
+          const cy = yAt(r.balance);
+          const neg = r.balance < 0;
+
+          return (
+            <g key={i}>
+              <circle
+                cx={cx}
+                cy={cy}
+                r="4.5"
+                fill={neg ? "rgba(248,113,113,0.95)" : "rgba(255,255,255,0.9)"}
+              />
+              {(i === 0 || i === n - 1 || i === Math.floor(n / 2)) && (
+                <text
+                  x={cx}
+                  y={height - 6}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="rgba(255,255,255,0.55)"
+                >
+                  {r.date.getDate()}日
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
