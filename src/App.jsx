@@ -168,6 +168,23 @@ export default function App() {
     return calcYearByMonth(expenseItems, year, state.settings.yearlyMode);
   }, [expenseItems, year, state.settings.yearlyMode]);
 
+  const expenseByMonth = useMemo(() => {
+  return calcYearByMonth(expenseItems, year, state.settings.yearlyMode);
+}, [expenseItems, year, state.settings.yearlyMode]);
+
+const incomeByMonth = useMemo(() => {
+  // 年間の「収入」を出したいので incomeItems を渡す
+  return calcYearByMonth(incomeItems, year, state.settings.yearlyMode);
+}, [incomeItems, year, state.settings.yearlyMode]);
+
+const netByMonth = useMemo(() => {
+  return expenseByMonth.map((v, i) => incomeByMonth[i] - v);
+}, [expenseByMonth, incomeByMonth]);
+
+const expenseYearTotal = useMemo(() => expenseByMonth.reduce((a, b) => a + b, 0), [expenseByMonth]);
+const incomeYearTotal = useMemo(() => incomeByMonth.reduce((a, b) => a + b, 0), [incomeByMonth]);
+const netYearTotal = useMemo(() => netByMonth.reduce((a, b) => a + b, 0), [netByMonth]);
+  
   const yearTotal = useMemo(() => byMonth.reduce((a, b) => a + b, 0), [byMonth]);
 
   const sortedItems = useMemo(() => {
@@ -181,6 +198,28 @@ export default function App() {
   }, [state.items, sortMode]);
 
   const monthStartDay = state.settings.monthStartDay;
+
+  const now = new Date();
+const { start, endExclusive } = useMemo(
+  () => getMonthPeriod(now, monthStartDay),
+  [now, monthStartDay]
+);
+
+// endExclusive の前日を作る
+const endInclusive = useMemo(() => {
+  const d = new Date(endExclusive);
+  d.setDate(d.getDate() - 1);
+  return d;
+}, [endExclusive]);
+
+function fmtJP(d) {
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+const periodLabel = useMemo(() => {
+  const m = start.getMonth() + 1;
+  return `${m}月（${fmtJP(start)}～${fmtJP(endInclusive)}）`;
+}, [start, endInclusive]);
 
   // 残高シミュ用（まだ「初期残高」は未入力なので、まずは0スタートで“マイナス日が出るか”を見る）
   const thisEvents = useMemo(() => buildThisPeriodEvents(state.items, state.settings, new Date()), [state.items, state.settings]);
@@ -205,7 +244,7 @@ export default function App() {
       </header>
 
       <section className="card">
-        <h2 style={{ margin: "0 0 8px" }}>今月（収支）</h2>
+       <h2 style={{ margin: "0 0 8px" }}>{periodLabel}（収支）</h2>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <MiniStat label="支出合計" value={yen(expenseThisMonth)} />
@@ -370,20 +409,43 @@ export default function App() {
         )}
       </section>
 
-      <section className="card">
-        <h2 style={{ margin: "0 0 8px" }}>{year}年（1〜12月）の支払い（支出）</h2>
-        <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
-          年合計：<b>{yen(yearTotal)}</b>（年額モード：{state.settings.yearlyMode}）
-        </div>
+<section className="card">
+  <h2 style={{ margin: "0 0 8px" }}>{year}年（1〜12月）</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
-          {byMonth.map((v, i) => (
-            <MiniStat key={i} label={`${i + 1}月`} value={yen(v)} />
-          ))}
-        </div>
+  <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 10 }}>
+    支出：<b>{yen(expenseYearTotal)}</b> ／ 収入：<b>{yen(incomeYearTotal)}</b> ／ 収支：<b>{yen(netYearTotal)}</b>
+    （年額モード：{state.settings.yearlyMode}）
+  </div>
 
-        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 10 }}>※ この表は暦月（1日〜末日）で集計しています。</div>
-      </section>
+  <table className="table">
+    <thead>
+      <tr>
+        <th>月</th>
+        <th>支出</th>
+        <th>収入</th>
+        <th>収支</th>
+      </tr>
+    </thead>
+    <tbody>
+      {expenseByMonth.map((ex, i) => {
+        const inc = incomeByMonth[i];
+        const net = netByMonth[i];
+        return (
+          <tr key={i}>
+            <td>{i + 1}月</td>
+            <td className="mono" style={{ color: "#f87171", fontWeight: 700 }}>{yen(ex)}</td>
+            <td className="mono" style={{ color: "#4ade80", fontWeight: 700 }}>{yen(inc)}</td>
+            <td className="mono" style={{ fontWeight: 800 }}>{yen(net)}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+
+  <div style={{ fontSize: 12, opacity: 0.75, marginTop: 10 }}>
+    ※ この表は暦月（1日〜末日）で集計しています。
+  </div>
+</section>
 
       <section className="card">
         <h2 style={{ margin: "0 0 8px" }}>設定</h2>
@@ -445,8 +507,10 @@ function AddForm({ onSave, onCancel, initialItem }) {
   const [cycle, setCycle] = useState(initialItem?.cycle ?? "monthly");
 
   const [payDay, setPayDay] = useState(initialItem?.payDay == null ? "" : String(initialItem.payDay));
-  const [startDate, setStartDate] = useState(initialItem?.startDate ?? todayISO());
-  const [endDate, setEndDate] = useState(initialItem?.endDate ?? "");
+ const [startDate, setStartDate] = useState(initialItem?.startDate ?? todayISO());
+const [endDate, setEndDate] = useState(
+  (initialItem?.endDate ?? initialItem?.startDate) ?? todayISO()
+);
   const [payDate, setPayDate] = useState(initialItem?.payDate ?? todayISO());
 
   const isInitialExpense = type === "expense" && category === "initial";
@@ -463,27 +527,42 @@ function AddForm({ onSave, onCancel, initialItem }) {
     setCategory(type === "income" ? "salary" : "fixed");
   }, [type]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function submit(e) {
-    e.preventDefault();
-    const amt = Number(amount);
-    if (!name.trim()) return alert("項目名を入れてね");
-    if (!Number.isFinite(amt) || amt <= 0) return alert("金額は正の数で入れてね");
+ function submit(e) {
+  e.preventDefault();
+  const amt = Number(amount);
+  if (!name.trim()) return alert("項目名を入れてね");
+  if (!Number.isFinite(amt) || amt <= 0) return alert("金額は正の数で入れてね");
 
-    const item = {
-      id: initialItem?.id ?? uid(),
-      type, // ✅ 追加：income / expense
-      name: name.trim(),
-      amount: Math.round(amt),
-      category,
-      cycle: isOneTime ? "one_time" : cycle,
-      payDay: isOneTime ? null : payDay ? Math.max(1, Math.min(31, Math.trunc(Number(payDay)))) : null,
-      payDate: isOneTime ? payDate : null,
-      startDate: isOneTime ? null : startDate,
-      endDate: isOneTime ? null : endDate || null,
-    };
+  // ★ ここに追加
+  const singleDay = !!startDate && !!endDate && startDate === endDate;
 
-    onSave(item);
+  let finalCycle = isOneTime ? "one_time" : cycle;
+
+  if (!isOneTime && singleDay) {
+    finalCycle = "one_time";
   }
+
+  const item = {
+    id: initialItem?.id ?? uid(),
+    type,
+    name: name.trim(),
+    amount: Math.round(amt),
+    category,
+    cycle: finalCycle,
+
+    payDate: finalCycle === "one_time" ? (payDate ?? startDate) : null,
+    payDay: finalCycle === "one_time"
+      ? null
+      : (payDay
+          ? Math.max(1, Math.min(31, Math.trunc(Number(payDay))))
+          : null),
+
+    startDate: finalCycle === "one_time" ? null : startDate,
+    endDate: finalCycle === "one_time" ? null : (endDate || null),
+  };
+
+  onSave(item);
+}
 
   const payWord = type === "income" ? "入金" : "引き落とし";
 
